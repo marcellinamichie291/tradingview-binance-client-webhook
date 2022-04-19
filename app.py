@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 client = Client(config.API_KEY, config.API_SECRET)
 
-def order(side, quantity, symbol, price, order_type=ORDER_TYPE_LIMIT):
+def order(side, quantity, symbol, price, order_type=ORDER_TYPE_MARKET):
     try:
         print(f"sending order {order_type} - {side} {quantity} {symbol}")
 
