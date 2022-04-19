@@ -25,7 +25,7 @@ def order(side, quantity, symbol, order_type=ORDER_TYPE_MARKET):
 
 @app.route('/')
 def welcome():
-    return render_template('inde x.html')
+    return render_template('index.html')
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
