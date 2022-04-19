@@ -1,4 +1,5 @@
 import json, config
+from math import floor
 from flask import Flask, request, jsonify, render_template
 from binance.client import Client
 from binance.enums import *
@@ -42,7 +43,11 @@ def webhook():
     quantity = data['strategy']['order_contracts']
     symbol = data['ticker']
     price = data['strategy']['order_price']
-    order_response = order(side, quantity, symbol, price)
+
+    fixsymbol = str.replace(symbol, "PERP", '')
+    fixprice = floor(price)
+
+    order_response = order(side, quantity, fixsymbol, fixprice)
 
     if order_response:
         return {
