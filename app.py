@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 client = Client(config.API_KEY, config.API_SECRET)
 
-def order(side, quantity, symbol, price, order_type=ORDER_TYPE_MARKET):
+def order(side, quantity, symbol, order_type=ORDER_TYPE_MARKET):
     try:
         print(f"sending order {order_type} - {side} {quantity} {symbol}")
 
@@ -42,7 +42,8 @@ def webhook():
     side = data['strategy']['order_action'].upper()
     quantity = data['strategy']['order_contracts']
     symbol = data['ticker']
-    price = data['strategy']['order_price']
+    
+    #price = data['strategy']['order_price']
 
     fixsymbol = str.replace(symbol, "PERP", '')
     #fixprice = floor(price)
