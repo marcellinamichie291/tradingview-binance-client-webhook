@@ -1,0 +1,220 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ItaiS
+
+//@version=5
+strategy("Instant Prof.",  overlay = true, pyramiding=2, initial_capital = 100, default_qty_type= strategy.percent_of_equity, default_qty_value = 100, calc_on_order_fills=false, slippage=0,commission_type=strategy.commission.percent,commission_value=0.03)
+
+var longPos = 0
+
+
+// -------------------------------------
+// ------- Inputs Fibos Values ---------
+// -------------------------------------
+
+fib1 = input.float(title="Fibo extension 1", defval=1.618)
+fib2 = input.float(title="Fibo extension 2", defval=2.618)
+reso = input.timeframe(title="Resolution VWAP", defval="W")
+dev = input.int(title="Deviation value min.", defval=150)
+
+
+// -------------------------------------
+// -------- VWAP Calculations ----------
+// -------------------------------------
+
+t = time(reso)
+debut = na(t[1]) or t > t[1]
+
+addsource = hlc3 * volume
+addvol = volume
+addsource := debut ? addsource : addsource + addsource[1]
+addvol := debut ? addvol : addvol + addvol[1]
+VWAP = addsource / addvol
+
+sn = 0.0
+sn := debut ? sn : sn[1] + volume * (hlc3 - VWAP[1]) * (hlc3 - VWAP)
+sd = math.sqrt(sn / addvol)
+
+Fibp2 = VWAP + fib2 * sd
+Fibp1 = VWAP + fib1 * sd
+Fibm1 = VWAP - fib1 * sd
+Fibm2 = VWAP - fib2 * sd
+
+
+// -------------------------------------
+// -------------- Plots ----------------
+// -------------------------------------
+
+plot(VWAP, title="VWAP", color=color.orange)
+pFibp2 = plot(Fibp2, color=color.red)
+pFibp1 = plot(Fibp1, color=color.red)
+pFibm1 = plot(Fibm1, color=color.lime)
+pFibm2 = plot(Fibm2, color=color.lime)
+
+var area_up_col  = color.new(#0cb51a,90)
+var area_dn_col = color.new(#ff1100,90)
+
+fill(pFibp2,pFibp1, area_dn_col)
+fill(pFibm2,pFibm1, area_up_col)
+
+
+// -------------------------------------
+// ------------ Positions --------------
+// -------------------------------------
+
+bull = ta.crossunder(low[1],Fibm1[1]) and low[1]>=Fibm2[1] and low>Fibm2 and low<Fibm1 and sd>dev
+bear = ta.crossover(high[1],Fibp1[1]) and high[1]<=Fibp2[1] and high<Fibp2 and high>Fibp1 and sd>dev
+
+//plotshape(bear, title='Bear', style=shape.triangledown, location=location.abovebar, color=color.red, offset=0)
+//plotshape(bull, title='Bull', style=shape.triangleup, location=location.belowbar, color=color.green, offset=0)
+
+
+//------------------------------------------------------------------------------
+//Trend Defining EMA
+
+lenEMA = input.int(200, minval=1, title="Length")
+src = input(close, title="Source")
+offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+out = ta.ema(src, lenEMA)
+plot(out, title="EMA", color=color.white, offset=offset)
+
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+typeMA = input.string(title = "Method", defval = "SMA", options=["SMA", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="Smoothing")
+smoothingLength = input.int(title = "Length", defval = 5, minval = 1, maxval = 100, group="Smoothing")
+
+smoothingLine = ma(out, smoothingLength, typeMA)
+plot(smoothingLine, title="Smoothing Line", color=#f37f20, offset=offset, display=display.none)
+
+
+//------------------------------------------------------------------------------
+//RSI DIVERGENCE
+
+len = input.int(title="RSI Period", minval=1, defval=5)
+//src = input(title="RSI Source", defval=close)
+lbR = input.int(title="Pivot Lookback Right", defval=3)
+lbL = input.int(title="Pivot Lookback Left", defval=1)
+takeProfitRSILevel = input.int(title="Take Profit at RSI Level", minval=70, defval=75)
+
+
+
+rangeUpper = input(title="Max of Lookback Range", defval=60)
+rangeLower = input(title="Min of Lookback Range", defval=5)
+plotBull = input(title="Plot Bullish", defval=true)
+plotHiddenBull = input(title="Plot Hidden Bullish", defval=true)
+plotBear = input(title="Plot Bearish", defval=true)
+plotHiddenBear = input(title="Plot Hidden Bearish", defval=false)
+
+
+bearColor = color.purple
+bullColor = color.green
+hiddenBullColor = color.new(color.green, 80)
+hiddenBearColor = color.new(color.red, 80)
+textColor = color.white
+noneColor = color.new(color.white, 100)
+
+osc = ta.rsi(src, len)
+
+plFound = na(ta.pivotlow(osc, lbL, lbR)) ? false : true
+phFound = na(ta.pivothigh(osc, lbL, lbR)) ? false : true
+
+_inRange(cond) =>
+    bars = ta.barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+
+//------------------------------------------------------------------------------
+// Regular Bullish
+
+// Osc: Higher Low
+oscHL = osc[lbR] > ta.valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
+
+// Price: Lower Low
+priceLL = low[lbR] < ta.valuewhen(plFound, low[lbR], 1)
+
+bullCond = plotBull and priceLL and oscHL and plFound
+
+
+//------------------------------------------------------------------------------
+// Hidden Bullish
+
+// Osc: Lower Low
+oscLL = osc[lbR] < ta.valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
+
+// Price: Higher Low
+priceHL = low[lbR] > ta.valuewhen(plFound, low[lbR], 1)
+
+hiddenBullCond = plotHiddenBull and priceHL and oscLL and plFound
+
+longCondition=bullCond or hiddenBullCond
+//? osc[lbR] : na  
+//hiddenBullCond
+//strategy.entry(id="RSIDivLE", long=true,  when=longCondition)
+
+
+//-----------------------------------ALERTS----------------------------------
+//alertcondition(longCondition, title="RSIDiv BUY ENTRY", message="RSIDiv BUY ENTRY")
+
+longPos:= longCondition?(longPos+1):longPos
+
+//barcolor(longCondition ?  color.yellow: na )
+//plotshape(longCondition?close:na, style=shape.arrowup,text="BUY", color=color.purple,transp=10, location=location.bottom)
+
+
+//------------------------------------------------------------------------------
+// Regular Bearish
+
+// Osc: Lower High
+oscLH = osc[lbR] < ta.valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+
+// Price: Higher High
+priceHH = high[lbR] > ta.valuewhen(phFound, high[lbR], 1)
+
+bearCond = plotBear and priceHH and oscLH and phFound
+
+
+//------------------------------------------------------------------------------
+// Hidden Bearish
+
+// Osc: Higher High
+oscHH = osc[lbR] > ta.valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+
+// Price: Lower High
+priceLH = high[lbR] < ta.valuewhen(phFound, high[lbR], 1)
+
+hiddenBearCond = plotHiddenBear and priceLH and oscHH and phFound
+
+
+longCloseCondition=(ta.crossover(osc,takeProfitRSILevel) or bearCond) and longPos>=1
+
+//strategy.close(id="RSIDivLE",  when=longCloseCondition)
+
+//-----------------------------------ALERTS----------------------------------
+//alertcondition(longCloseCondition, title="RSIDiv BUY EXIT", message="RSIDiv BUY EXIT")
+
+longPos:= longCloseCondition?(longPos-1):longPos   //reset the Buy position
+//longPos:= longCloseCondition ? (longPos-1) : longPos  
+
+//===
+//pos = longCondition==true? 1 : longCloseCondition==true ? -1 :  longPos>=1 ? 2 :  0
+
+//barcolor(pos == -1 ? color.purple: pos == 1 ? color.yellow : pos == 2 ?  color.blue:na )
+barcolor(longCondition==true ? color.yellow : longCloseCondition==true ? color.purple : longPos>=1 ? color.blue : na )
+
+//===
+//barcolor(longCloseCondition==true ? color.purple : na, offset=0)
+//plotshape(longCloseCondition and longPos>=1 ?close:na, style=shape.arrowdown,text="CLOSE", color=color.purple,transp=10, location=location.abovebar)
+
+// -------------------------------------
+// --------- Strategy Orders -----------
+// -------------------------------------
+
+strategy.entry("Long", strategy.long, when = bull or longCondition)
+strategy.close("Long", when = ta.crossover(high,VWAP) or ta.crossunder(low,Fibm2) or longCloseCondition)
+
+strategy.entry("Short", strategy.short, when = bear)
+strategy.close("Short", when = ta.crossunder(low,VWAP) or ta.crossover(high,Fibp2))
