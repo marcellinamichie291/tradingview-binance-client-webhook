@@ -1,4 +1,4 @@
-import json, config
+import json, config, requests
 from math import floor
 from flask import Flask, request, jsonify, render_template
 from binance.client import Client
@@ -43,12 +43,20 @@ def webhook():
     quantity = data['strategy']['order_contracts']
     symbol = data['ticker']
     
-    #price = data['strategy']['order_price']
+    price = data['strategy']['order_price']
 
     fixsymbol = str.replace(symbol, "PERP", '')
     #fixprice = floor(price)
 
     order_response = order(side, quantity, fixsymbol)
+
+    # if a DISCORD URL is set in the config file, we will post to the discord webhook
+    if config.DISCORD_WEBHOOK_URL:
+        chat_message = {
+            "content": f"tradingview strategy alert triggered: {fixsymbol} {side} @ {price}"
+        }
+
+        requests.post(config.DISCORD_WEBHOOK_URL, json=chat_message)
 
     if order_response:
         return {
@@ -62,3 +70,5 @@ def webhook():
             "code": "error",
             "message": "order failed"
         }
+
+    
