@@ -53,7 +53,7 @@ def webhook():
     # if a DISCORD URL is set in the config file, we will post to the discord webhook
     if config.DISCORD_WEBHOOK_URL:
         chat_message = {
-            "content": f"tradingview strategy alert triggered: {fixsymbol} {side} @ {price}"
+            "content": f"> ```{fixsymbol} {side} @ {price}```"
         }
 
         requests.post(config.DISCORD_WEBHOOK_URL, json=chat_message)
