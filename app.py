@@ -42,6 +42,7 @@ def webhook():
     side = data['strategy']['order_action'].upper()
     quantity = data['strategy']['order_contracts']
     symbol = data['ticker']
+    stratname = data['stratname']
     
     price = data['strategy']['order_price']
 
@@ -55,7 +56,7 @@ def webhook():
         chat_message = {
         "embeds": [
             {      
-            "title": f"{fixsymbol} {side} @ {price}",
+            "title": f"{fixsymbol} {side} @ {price} \n\n ***from {stratname}***",
             "color": 486113 
             }
         ]
