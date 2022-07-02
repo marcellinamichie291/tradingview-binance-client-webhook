@@ -57,7 +57,8 @@ def webhook():
         "embeds": [
             {      
             "title": f"{fixsymbol} {side} @ {price} \n\n ***from {stratname}***",
-            "color": 486113 
+            "color": 486113,
+            "description": "@everyone"
             }
         ]
     }
