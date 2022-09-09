@@ -43,6 +43,12 @@ def webhook():
     quantity = data['strategy']['order_contracts']
     symbol = data['ticker']
     stratname = data['stratname']
+    indexopen = data['open']
+    indexclose = data['close']
+    indexhigh = data['high']
+    indexvol = data['volume']
+
+    membership = data['membership']
     
     price = data['strategy']['order_price']
 
@@ -56,14 +62,22 @@ def webhook():
         chat_message = {
         "embeds": [
             {      
-            "title": f"{fixsymbol} {side} @ {price} \n\n ***from {stratname}***",
+            "title": f"{fixsymbol} {side} @ {price}",
             "color": 486113,
-            "description": "@everyone"
+            "description": f"open: {indexopen}\nhigh: {indexhigh}\nlow: {indexvol}\nclose: {indexclose}\nvolume: {indexvol}\n @everyone",
+            "fields": [
+                    {
+                    "name": "From",
+                                "value": f"***{stratname}***"
+                    }
+                ]
             }
         ]
     }
-
-        requests.post(config.DISCORD_WEBHOOK_URL, json=chat_message)
+        if membership == 'pro':
+            requests.post(config.DISCORDPRO_WEBHOOK_URL, json=chat_message)
+        else:
+            requests.post(config.DISCORD_WEBHOOK_URL, json=chat_message)
 
     if order_response:
         return {
