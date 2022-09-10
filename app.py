@@ -43,12 +43,6 @@ def webhook():
     quantity = data['strategy']['order_contracts']
     symbol = data['ticker']
     stratname = data['stratname']
-    indexopen = data['open']
-    indexclose = data['close']
-    indexhigh = data['high']
-    indexvol = data['volume']
-
-    membership = data['membership']
     
     price = data['strategy']['order_price']
 
@@ -56,6 +50,12 @@ def webhook():
     #fixprice = floor(price)
 
     order_response = order(side, quantity, fixsymbol)
+
+    indexopen = data['bar']['open']
+    indexclose = data['bar']['close']
+    indexhigh = data['bar']['high']
+    indexvol = data['bar']['volume']
+    membership = data['membership']
 
     # if a DISCORD URL is set in the config file, we will post to the discord webhook
     if config.DISCORD_WEBHOOK_URL:
